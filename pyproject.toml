@@ -1,0 +1,4 @@
+[tool.pytest.ini_options]
+markers = [
+    "github: Github Action Workflow Test Marker",
+]
