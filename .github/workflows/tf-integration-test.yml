@@ -1,0 +1,52 @@
+name: 'Terraform Integration Test'
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+  workflow_run:
+    workflows: ["README Workflow Dispatch"]
+    types:
+      - completed
+
+env:
+  GOOGLE_PROJECT: "${{ secrets.GCP_PROJECT }}"
+  GOOGLE_OAUTH_ACCESS_TOKEN: "${{ secrets.GOOGLE_OAUTH_ACCESS_TOKEN }}"
+
+jobs:
+  terraform-integration-plan:
+    if: github.actor != 'github-actions[bot]'
+    uses: sim-parables/github-workflows-reusable/.github/workflows/tf-integration-plan.yml@GCPv1
+    secrets: inherit
+    with:
+      ACT_MODE: ${{ !!github.event.act }}
+   
+  terraform-integration-apply:
+    if: github.event.act || github.ref == 'refs/heads/main'
+    needs: [ terraform-integration-plan ]
+    uses: sim-parables/github-workflows-reusable/.github/workflows/tf-integration-apply.yml@GCPv1
+    secrets: inherit
+    with:
+      ACT_MODE: ${{ !!github.event.act }}
+      TF_PLAN_PATH: "${{ needs.terraform-integration-plan.outputs.TF_PLAN_PATH }}"
+      TF_PLAN_NAME: "${{ needs.terraform-integration-plan.outputs.TF_PLAN_NAME }}"
+  
+  terraform-integration-test:
+    uses: ./.github/workflows/reusable-test.yml
+    needs: [ terraform-integration-apply ]
+    secrets: inherit
+    with:
+      ACT_MODE: ${{ !!github.event.act }}
+            
+                
+  terraform-integration-destroy:
+    if: always()
+    needs: [ terraform-integration-test ]
+    uses: sim-parables/github-workflows-reusable/.github/workflows/tf-integration-destroy.yml@GCPv1
+    secrets: inherit
+    with:
+      ACT_MODE: ${{ !!github.event.act }}
+    

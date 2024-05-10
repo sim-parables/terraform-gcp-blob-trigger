@@ -1,0 +1,117 @@
+name: '[Reusable] Blob Trigger Pytest'
+
+on:
+  workflow_call:
+    inputs:
+      ACT_MODE:
+        required: true
+        type: boolean
+    
+    secrets:
+      GCP_IMPERSONATE_SERVICE_ACCOUNT_EMAIL:
+        required: true
+      GCP_PROJECT:
+        required: true
+      GCP_WORKLOAD_IDENTITY_PROVIDER:
+        required: false
+      GOOGLE_OAUTH_ACCESS_TOKEN:
+        required: false
+      TF_API_TOKEN:
+        required: true
+
+#Special permissions required for OIDC authentication
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  GOOGLE_PROJECT: "${{ secrets.GCP_PROJECT }}"
+  GOOGLE_OAUTH_ACCESS_TOKEN: "${{ secrets.GOOGLE_OAUTH_ACCESS_TOKEN }}"
+
+jobs:
+  terraform-output:
+    name: Terraform Output
+    runs-on: ubuntu-latest
+    
+    defaults:
+        run:
+          working-directory: "./test"
+    
+    outputs:
+      INPUT_BUCKET: "${{ steps.tf-raw.outputs.INPUT_BUCKET }}"
+      OUTPUT_BUCKET: "${{ steps.tf-raw.outputs.OUTPUT_BUCKET }}"
+
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    # Install the latest version of the Terraform CLI
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+        terraform_wrapper: false
+    
+    - name: terraform init
+      run: terraform init
+
+    - name: terraform raw output
+      id: tf-raw
+      run: |
+        echo "INPUT_BUCKET=$(terraform output -raw trigger_bucket_name)
+        OUTPUT_BUCKET=$(terraform output -raw results_bucket_name)" >> $GITHUB_OUTPUT
+  
+  terraform-test:
+    name: Terraform Test
+    needs: [ terraform-output ]
+    runs-on: ubuntu-latest
+    env:
+        INPUT_BUCKET: ${{ needs.terraform-output.outputs.INPUT_BUCKET }}
+        OUTPUT_BUCKET: ${{ needs.terraform-output.outputs.OUTPUT_BUCKET }}
+    
+    defaults:
+      run:
+        working-directory: "./test/unit_test"
+    
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Configure GCP Credentials - Github Runner
+        id: auth
+        uses: 'google-github-actions/auth@v2'
+        if: ${{ !inputs.ACT_MODE }}
+        with:
+          service_account: "${{ secrets.GCP_IMPERSONATE_SERVICE_ACCOUNT_EMAIL }}"
+          workload_identity_provider: "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}"
+          token_format: "access_token"
+          access_token_lifetime: '300s'
+              
+      - name: Set Github Runner ENV variables
+        if: ${{ !inputs.ACT_MODE }}
+        run: |
+          echo "GOOGLE_OAUTH_ACCESS_TOKEN=${{ steps.auth.outputs.access_token }}" >> $GITHUB_ENV
+        
+      - name: Setup Python # Set Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+                  
+      # Install pip and pytest
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest google-auth gcsfs uuid
+      
+      - name: Test with pytest
+        run: |
+          pytest test_blob_trigger.py \
+            --doctest-modules \
+            --junitxml=junit/test-results.xml
+              
+      - name: Upload pytest test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: pytest-results
+          path: junit/test-results.xml

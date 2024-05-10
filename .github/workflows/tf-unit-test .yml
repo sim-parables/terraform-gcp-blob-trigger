@@ -1,0 +1,13 @@
+name: 'Terraform Unit Tests'
+
+on:
+  push:
+
+jobs:
+  terraform-unit-tests:
+    uses: sim-parables/github-workflows-reusable/.github/workflows/tf-unit-test.yml@4b8c9b2d51dce19b7061a85546ace20b58d44c93
+    name: Terraform Unit Tests
+    secrets: inherit
+    with:
+      ACT_MODE: ${{ !!github.event.act }}
+      SKIP_CHECKS: CKV_GCP_62,CKV2_GCP_10

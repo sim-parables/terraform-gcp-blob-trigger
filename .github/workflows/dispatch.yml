@@ -1,0 +1,48 @@
+name: 'Terraform Workflow Dispatch'
+
+on:
+  workflow_dispatch:
+    inputs:
+      terraform_operation:
+        description: "Terraform operation: plan, apply, destroy"
+        required: true
+        default: "plan"
+        type: choice
+        options:
+          - plan
+          - apply
+          - test
+          - destroy
+
+env:
+  GOOGLE_PROJECT: "${{ secrets.GCP_PROJECT }}"
+  GOOGLE_OAUTH_ACCESS_TOKEN: "${{ secrets.GOOGLE_OAUTH_ACCESS_TOKEN }}"
+
+jobs:
+  terraform-dispatch-plan:
+    if: ${{ github.event.act || github.event.inputs.terraform_operation == 'plan' }}
+    uses: sim-parables/github-workflows-reusable/.github/workflows/tf-dispatch-plan.yml@GCPv1
+    secrets: inherit
+    with:
+      ACT_MODE: ${{ !!github.event.act }}
+  
+  terraform-dispatch-apply:
+    if: ${{ github.event.act ||github.event.inputs.terraform_operation == 'apply' }}
+    uses: sim-parables/github-workflows-reusable/.github/workflows/tf-dispatch-apply.yml@GCPv1
+    secrets: inherit
+    with:
+      ACT_MODE: ${{ !!github.event.act }}
+  
+  terraform-dispatch-test:
+    if: ${{ github.event.act ||github.event.inputs.terraform_operation == 'test' }}
+    uses: ./.github/workflows/reusable-test.yml
+    secrets: inherit
+    with:
+      ACT_MODE: ${{ !!github.event.act }}
+
+  terraform-dispatch-destroy:
+    if: ${{ github.event.act ||github.event.inputs.terraform_operation == 'destroy' }}
+    uses: sim-parables/github-workflows-reusable/.github/workflows/tf-dispatch-destroy.yml@GCPv1
+    secrets: inherit
+    with:
+      ACT_MODE: ${{ !!github.event.act }}
