@@ -37,9 +37,13 @@ import os
 
 # Environment Variables
 GOOGLE_OAUTH_ACCESS_TOKEN=os.getenv('GOOGLE_OAUTH_ACCESS_TOKEN')
+assert not GOOGLE_OAUTH_ACCESS_TOKEN is None
 INPUT_BUCKET=os.getenv('INPUT_BUCKET')
+assert not INPUT_BUCKET is None
 OUTPUT_BUCKET=os.getenv('OUTPUT_BUCKET')
+assert not OUTPUT_BUCKET is None
 GOOGLE_PROJECT=os.getenv('GOOGLE_PROJECT')
+assert not GOOGLE_PROJECT is None
 
 def _write_blob(fs, payload):
     with fs.open(f'gs://{INPUT_BUCKET}/test.json', 'w') as f:
