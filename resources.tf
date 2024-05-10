@@ -82,8 +82,8 @@ data "archive_file" "this" {
 ## - `bucket_name`: GCS bucket name
 ## ---------------------------------------------------------------------------------------------------------------------
 module "trigger_bucket" {
-  source      = "./modules/gcs_bucket"
-  
+  source = "./modules/gcs_bucket"
+
   bucket_name = var.target_bucket_name
 
   providers = {
@@ -101,8 +101,8 @@ module "trigger_bucket" {
 ## - `bucket_name`: GCS bucket name
 ## ---------------------------------------------------------------------------------------------------------------------
 module "function_bucket" {
-  source      = "./modules/gcs_bucket"
-  
+  source = "./modules/gcs_bucket"
+
   bucket_name = var.function_bucket_name
 
   providers = {
@@ -123,7 +123,7 @@ module "function_bucket" {
 ## ---------------------------------------------------------------------------------------------------------------------
 resource "google_storage_bucket_object" "this" {
   provider = google.auth_session
-  
+
   name   = "${var.function_name}.zip"
   bucket = module.function_bucket.bucket_name
   source = data.archive_file.this.output_path
@@ -188,7 +188,7 @@ resource "google_cloudfunctions_function" "this" {
 ## ---------------------------------------------------------------------------------------------------------------------
 resource "google_cloudfunctions_function_iam_member" "admin" {
   provider = google.auth_session
-  
+
   region         = google_cloudfunctions_function.this.region
   cloud_function = google_cloudfunctions_function.this.name
   role           = "roles/cloudfunctions.admin"

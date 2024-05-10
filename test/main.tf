@@ -48,7 +48,7 @@ data "google_project" "this" {
 ## - `google.tokengen`: Alias for the GCP provider for generating service accounts.
 ##---------------------------------------------------------------------------------------------------------------------
 module "service_account_auth" {
-  source = "github.com/sim-parables/terraform-gcp-service-account.git"
+  source = "github.com/sim-parables/terraform-gcp-service-account.git?ref=af0e8d01245b999e019b178d848a3bd5edf64055"
 
   IMPERSONATE_SERVICE_ACCOUNT_EMAIL = var.IMPERSONATE_SERVICE_ACCOUNT_EMAIL
   new_service_account_name          = "example-tf-sa"
