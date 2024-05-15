@@ -74,8 +74,13 @@ def test_gcp_wif_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
     logging.info('Pytest | Test GPC Blob Trigger')
     GOOGLE_APPLICATION_CREDENTIALS=os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
     assert not GOOGLE_APPLICATION_CREDENTIALS is None
+    scopes = [
+        'https://www.googleapis.com/auth/cloud-platform',
+        'https://www.googleapis.com/auth/devstorage.full_control'
+    ]
 
     creds = identity_pool.Credentials.from_file(GOOGLE_APPLICATION_CREDENTIALS)
+    creds = creds.with_scopes(scopes)
     fs = gcsfs.GCSFileSystem(project=GOOGLE_PROJECT, token=creds)
     _write_blob(fs, payload)
 

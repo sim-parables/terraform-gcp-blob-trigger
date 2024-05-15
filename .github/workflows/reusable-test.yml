@@ -102,6 +102,7 @@ jobs:
         with:
           service_account: "${{ needs.terraform-output.outputs.SERVICE_ACCOUNT }}"
           workload_identity_provider: "${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}"
+          token_format: access_token
           create_credentials_file: true
         
       - name: Setup Python # Set Python version
