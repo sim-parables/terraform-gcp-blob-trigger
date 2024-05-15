@@ -16,6 +16,28 @@ terraform {
   }
 }
 
+## ---------------------------------------------------------------------------------------------------------------------
+## GOOGLE PROJECT DATA SOURCE
+## 
+## GCP Project Configurations/Details Data Source.
+## ---------------------------------------------------------------------------------------------------------------------
+data "google_project" "this" {
+  provider = google.tokengen
+}
+
+locals {
+  principal_roles = [
+    {
+      principal = "principal://iam.googleapis.com/projects/${data.google_project.this.number}/locations/global/workloadIdentityPools/${var.POOL_ID}/subject/repo:${var.GITHUB_REPOSITORY}:ref:${var.GITHUB_REF}",
+      role      = "roles/iam.workloadIdentityUser"
+    },
+    {
+      principal = "principal://iam.googleapis.com/projects/${data.google_project.this.number}/locations/global/workloadIdentityPools/${var.POOL_ID}/subject/repo:${var.GITHUB_REPOSITORY}:environment:${var.GITHUB_ENV}",
+      role      = "roles/iam.workloadIdentityUser"
+    },
+  ]
+}
+
 
 ## ---------------------------------------------------------------------------------------------------------------------
 ## GCP PROVIDER
@@ -24,15 +46,6 @@ terraform {
 ## ---------------------------------------------------------------------------------------------------------------------
 provider "google" {
   alias = "tokengen"
-}
-
-## ---------------------------------------------------------------------------------------------------------------------
-## GOOGLE PROJECT DATA SOURCE
-## 
-## GCP Project Configurations/Details Data Source.
-## ---------------------------------------------------------------------------------------------------------------------
-data "google_project" "this" {
-  provider = google.tokengen
 }
 
 ##---------------------------------------------------------------------------------------------------------------------
@@ -48,7 +61,7 @@ data "google_project" "this" {
 ## - `google.tokengen`: Alias for the GCP provider for generating service accounts.
 ##---------------------------------------------------------------------------------------------------------------------
 module "service_account_auth" {
-  source = "github.com/sim-parables/terraform-gcp-service-account.git?ref=af0e8d01245b999e019b178d848a3bd5edf64055"
+  source = "github.com/sim-parables/terraform-gcp-service-account.git?ref=c073e6d3a8b1b153e8852868f9a78a70c49e49fd"
 
   IMPERSONATE_SERVICE_ACCOUNT_EMAIL = var.IMPERSONATE_SERVICE_ACCOUNT_EMAIL
   new_service_account_name          = "example-tf-sa"
@@ -56,6 +69,7 @@ module "service_account_auth" {
     "roles/storage.admin",
     "roles/cloudfunctions.admin",
     "roles/iam.serviceAccountUser",
+    "roles/iam.serviceAccountAdmin"
   ]
 
   providers = {
@@ -75,6 +89,34 @@ provider "google" {
   alias        = "auth_session"
   access_token = module.service_account_auth.access_token
   project      = data.google_project.this.project_id
+}
+
+##---------------------------------------------------------------------------------------------------------------------
+## GCP WORKLOAD IDENTITY FEDERTAION PRINICPALS MODULE
+##
+## This module creates Service Account grants to a specific Google Workload Identity Federation (WIF) Pool
+## to allow OpenID Connect authorization within Github Actions.
+##
+## Parameters:
+## - `project_number`: GCP project number (not ID).
+## - `pool_id`: Exiting Google WIF pool ID.
+## - `prinicpal_roles`: List of objects defining WIF prinicpals and impersonating roles.
+## - `service_account_id`: New service account ID.
+##
+## Providers:
+## - `google.tokengen`: Alias for the GCP provider for generating service accounts.
+##---------------------------------------------------------------------------------------------------------------------
+module "workload_identity_federation_principals" {
+  source = "github.com/sim-parables/terraform-gcp-service-account.git?ref=c073e6d3a8b1b153e8852868f9a78a70c49e49fd//modules/workflow_identity_federation_principal"
+
+  project_number     = data.google_project.this.number
+  pool_id            = var.POOL_ID
+  principal_roles    = local.principal_roles
+  service_account_id = module.service_account_auth.service_account_id
+
+  providers = {
+    google.auth_session = google.auth_session
+  }
 }
 
 ##---------------------------------------------------------------------------------------------------------------------

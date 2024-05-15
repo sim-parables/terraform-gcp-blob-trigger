@@ -4,19 +4,36 @@ on:
   workflow_call:
     inputs:
       ACT_MODE:
+        description: |
+          For running Github Action Workflows locally with Nektos act
         required: true
         type: boolean
+      markers:
+        description: |
+          PyTest Markers to select specific tests to work within Github Action Workflows
+        required: true
+        type: string
     
     secrets:
-      GCP_IMPERSONATE_SERVICE_ACCOUNT_EMAIL:
+      GOOGLE_IMPERSONATE_SERVICE_ACCOUNT_EMAIL:
+        description: |
+          Google Cloud Service Account Impersonator for authentication
         required: true
-      GCP_PROJECT:
+      GOOGLE_PROJECT:
+        description: |
+          Google Cloud Project ID
         required: true
-      GCP_WORKLOAD_IDENTITY_PROVIDER:
+      GOOGLE_WORKLOAD_IDENTITY_PROVIDER:
+        description: |
+          Google Cloud Workload Identity Federation Provider Member ID
         required: false
       GOOGLE_OAUTH_ACCESS_TOKEN:
+        description: |
+          Google Cloud OAauth2 Access Token
         required: false
       TF_API_TOKEN:
+        description: |
+          Terraform.io Access Token
         required: true
 
 #Special permissions required for OIDC authentication
@@ -40,6 +57,7 @@ jobs:
     outputs:
       INPUT_BUCKET: "${{ steps.tf-raw.outputs.INPUT_BUCKET }}"
       OUTPUT_BUCKET: "${{ steps.tf-raw.outputs.OUTPUT_BUCKET }}"
+      SERVICE_ACCOUNT: "${{ steps.tf-raw.outputs.SERVICE_ACCOUNT}}"
 
     steps:
     # Checkout the repository to the GitHub Actions runner
@@ -60,7 +78,8 @@ jobs:
       id: tf-raw
       run: |
         echo "INPUT_BUCKET=$(terraform output -raw trigger_bucket_name)
-        OUTPUT_BUCKET=$(terraform output -raw results_bucket_name)" >> $GITHUB_OUTPUT
+        OUTPUT_BUCKET=$(terraform output -raw results_bucket_name)
+        SERVICE_ACCOUNT=$(terraform output -raw service_account)" >> $GITHUB_OUTPUT
   
   terraform-test:
     name: Terraform Test
@@ -76,21 +95,14 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-        
+
       - name: Configure GCP Credentials - Github Runner
-        id: auth
         uses: 'google-github-actions/auth@v2'
         if: ${{ !inputs.ACT_MODE }}
         with:
-          service_account: "${{ secrets.GCP_IMPERSONATE_SERVICE_ACCOUNT_EMAIL }}"
-          workload_identity_provider: "${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}"
-          token_format: "access_token"
-          access_token_lifetime: '300s'
-              
-      - name: Set Github Runner ENV variables
-        if: ${{ !inputs.ACT_MODE }}
-        run: |
-          echo "GOOGLE_OAUTH_ACCESS_TOKEN=${{ steps.auth.outputs.access_token }}" >> $GITHUB_ENV
+          service_account: "${{ needs.terraform-output.outputs.SERVICE_ACCOUNT }}"
+          workload_identity_provider: "${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}"
+          create_credentials_file: true
         
       - name: Setup Python # Set Python version
         uses: actions/setup-python@v5
@@ -105,7 +117,7 @@ jobs:
       
       - name: Test with pytest
         run: |
-          pytest test_blob_trigger.py \
+          pytest -m "${{ inputs.markers }}" \
             --doctest-modules \
             --junitxml=junit/test-results.xml
               

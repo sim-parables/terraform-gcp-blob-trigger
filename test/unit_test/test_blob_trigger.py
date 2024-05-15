@@ -26,6 +26,7 @@ terraform destroy -auto-approve
 """
 
 from google.oauth2 import credentials
+from google.auth import identity_pool
 
 import logging
 import pytest
@@ -36,8 +37,6 @@ import time
 import os
 
 # Environment Variables
-GOOGLE_OAUTH_ACCESS_TOKEN=os.getenv('GOOGLE_OAUTH_ACCESS_TOKEN')
-assert not GOOGLE_OAUTH_ACCESS_TOKEN is None
 INPUT_BUCKET=os.getenv('INPUT_BUCKET')
 assert not INPUT_BUCKET is None
 OUTPUT_BUCKET=os.getenv('OUTPUT_BUCKET')
@@ -54,10 +53,29 @@ def _read_blob(fs):
         return json.loads(f.read())
 
 @pytest.mark.github
-def test_gcp_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
+@pytest.mark.oauth2
+def test_gcp_oauth2_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
     logging.info('Pytest | Test GPC Blob Trigger')
+    GOOGLE_OAUTH_ACCESS_TOKEN=os.getenv('GOOGLE_OAUTH_ACCESS_TOKEN')
+    assert not GOOGLE_OAUTH_ACCESS_TOKEN is None
 
     creds = credentials.Credentials(token=GOOGLE_OAUTH_ACCESS_TOKEN)
+    fs = gcsfs.GCSFileSystem(project=GOOGLE_PROJECT, token=creds)
+    _write_blob(fs, payload)
+
+    time.sleep(10)
+    rs = _read_blob(fs)
+
+    assert rs['test_value'] == payload['test_value']
+
+@pytest.mark.github
+@pytest.mark.wif
+def test_gcp_wif_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
+    logging.info('Pytest | Test GPC Blob Trigger')
+    GOOGLE_APPLICATION_CREDENTIALS=os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    assert not GOOGLE_APPLICATION_CREDENTIALS is None
+
+    creds = identity_pool.Credentials.from_file(GOOGLE_APPLICATION_CREDENTIALS)
     fs = gcsfs.GCSFileSystem(project=GOOGLE_PROJECT, token=creds)
     _write_blob(fs, payload)
 

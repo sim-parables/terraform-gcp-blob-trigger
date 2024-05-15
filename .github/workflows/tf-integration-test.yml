@@ -17,36 +17,98 @@ env:
   GOOGLE_OAUTH_ACCESS_TOKEN: "${{ secrets.GOOGLE_OAUTH_ACCESS_TOKEN }}"
 
 jobs:
+  reusable-env-vars:
+    runs-on: ubuntu-latest
+    outputs:
+      TF_VAR_POOL_ID: "${{ steps.env_variables.outputs.TF_VAR_POOL_ID }}"
+      TF_VAR_GITHUB_REPOSITORY_OWNER: "${{ steps.env_variables.outputs.TF_VAR_GITHUB_REPOSITORY_OWNER }}"
+      TF_VAR_GITHUB_REPOSITORY: "${{ steps.env_variables.outputs.TF_VAR_GITHUB_REPOSITORY }}"
+      TF_VAR_GITHUB_REF: "${{ steps.env_variables.outputs.TF_VAR_GITHUB_REF }}"
+      TF_VAR_GITHUB_ENV: "${{ steps.env_variables.outputs.TF_VAR_GITHUB_ENV }}"
+    steps:
+      - name: Encode Environment Variables
+        id: env_variables
+        env:
+          TF_VAR_POOL_ID: "${{ secrets.GOOGLE_WORKLOAD_IDENTITY_POOL_ID }}"
+          TF_VAR_GITHUB_REPOSITORY_OWNER: "${{ github.repository_owner }}"
+          TF_VAR_GITHUB_REPOSITORY: "${{ github.repository }}"
+          TF_VAR_GITHUB_REF: "${{ github.ref }}"
+          TF_VAR_GITHUB_ENV: production
+        run: |
+          echo "TF_VAR_POOL_ID=$(echo $TF_VAR_POOL_ID | base64 -w0 | base64 -w0)" >> $GITHUB_OUTPUT
+          echo "TF_VAR_GITHUB_REPOSITORY_OWNER=$(echo $TF_VAR_GITHUB_REPOSITORY_OWNER | base64 -w0 | base64 -w0)" >> $GITHUB_OUTPUT
+          echo "TF_VAR_GITHUB_REPOSITORY=$(echo $TF_VAR_GITHUB_REPOSITORY | base64 -w0 | base64 -w0)" >> $GITHUB_OUTPUT
+          echo "TF_VAR_GITHUB_REF=$(echo $TF_VAR_GITHUB_REF | base64 -w0 | base64 -w0)" >> $GITHUB_OUTPUT
+          echo "TF_VAR_GITHUB_ENV=$(echo $TF_VAR_GITHUB_ENV | base64 -w0 | base64 -w0)" >> $GITHUB_OUTPUT
+
   terraform-integration-plan:
     if: github.actor != 'github-actions[bot]'
+    needs: [ reusable-env-vars ]
     uses: sim-parables/github-workflows-reusable/.github/workflows/tf-integration-plan.yml@GCPv1
-    secrets: inherit
+    secrets:
+      GOOGLE_IMPERSONATE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_IMPERSONATE_SERVICE_ACCOUNT_EMAIL }}
+      GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+      GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+      GOOGLE_OAUTH_ACCESS_TOKEN: ${{ secrets.GOOGLE_OAUTH_ACCESS_TOKEN }}
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+      env_variables: |
+        TF_VAR_POOL_ID="${{ needs.reusable-env-vars.outputs.TF_VAR_POOL_ID }}"
+        TF_VAR_GITHUB_REPOSITORY_OWNER="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_REPOSITORY_OWNER }}"
+        TF_VAR_GITHUB_REPOSITORY="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_REPOSITORY }}"
+        TF_VAR_GITHUB_REF="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_REF }}"
+        TF_VAR_GITHUB_ENV="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_ENV }}"
     with:
       ACT_MODE: ${{ !!github.event.act }}
    
   terraform-integration-apply:
     if: github.event.act || github.ref == 'refs/heads/main'
-    needs: [ terraform-integration-plan ]
+    needs: [ reusable-env-vars, terraform-integration-plan ]
     uses: sim-parables/github-workflows-reusable/.github/workflows/tf-integration-apply.yml@GCPv1
-    secrets: inherit
+    secrets:
+      GOOGLE_IMPERSONATE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_IMPERSONATE_SERVICE_ACCOUNT_EMAIL }}
+      GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+      GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+      GOOGLE_OAUTH_ACCESS_TOKEN: ${{ secrets.GOOGLE_OAUTH_ACCESS_TOKEN }}
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+      env_variables: |
+        TF_VAR_POOL_ID="${{ needs.reusable-env-vars.outputs.TF_VAR_POOL_ID }}"
+        TF_VAR_GITHUB_REPOSITORY_OWNER="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_REPOSITORY_OWNER }}"
+        TF_VAR_GITHUB_REPOSITORY="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_REPOSITORY }}"
+        TF_VAR_GITHUB_REF="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_REF }}"
+        TF_VAR_GITHUB_ENV="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_ENV }}"
     with:
       ACT_MODE: ${{ !!github.event.act }}
-      TF_PLAN_PATH: "${{ needs.terraform-integration-plan.outputs.TF_PLAN_PATH }}"
-      TF_PLAN_NAME: "${{ needs.terraform-integration-plan.outputs.TF_PLAN_NAME }}"
   
   terraform-integration-test:
     uses: ./.github/workflows/reusable-test.yml
     needs: [ terraform-integration-apply ]
-    secrets: inherit
+    secrets:
+      GOOGLE_IMPERSONATE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_IMPERSONATE_SERVICE_ACCOUNT_EMAIL }}
+      GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+      GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+      GOOGLE_OAUTH_ACCESS_TOKEN: ${{ secrets.GOOGLE_OAUTH_ACCESS_TOKEN }}
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
     with:
       ACT_MODE: ${{ !!github.event.act }}
+      markers: "github and ${{ !!github.event.act && 'oauth2' || 'wif' }}"
             
                 
   terraform-integration-destroy:
     if: always()
-    needs: [ terraform-integration-test ]
+    needs: [ reusable-env-vars, terraform-integration-test ]
     uses: sim-parables/github-workflows-reusable/.github/workflows/tf-integration-destroy.yml@GCPv1
-    secrets: inherit
+    secrets:
+      GOOGLE_IMPERSONATE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_IMPERSONATE_SERVICE_ACCOUNT_EMAIL }}
+      GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+      GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+      GOOGLE_OAUTH_ACCESS_TOKEN: ${{ secrets.GOOGLE_OAUTH_ACCESS_TOKEN }}
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+      env_variables: |
+        TF_VAR_POOL_ID="${{ needs.reusable-env-vars.outputs.TF_VAR_POOL_ID }}"
+        TF_VAR_GITHUB_REPOSITORY_OWNER="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_REPOSITORY_OWNER }}"
+        TF_VAR_GITHUB_REPOSITORY="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_REPOSITORY }}"
+        TF_VAR_GITHUB_REF="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_REF }}"
+        TF_VAR_GITHUB_ENV="${{ needs.reusable-env-vars.outputs.TF_VAR_GITHUB_ENV }}"
     with:
       ACT_MODE: ${{ !!github.event.act }}
     

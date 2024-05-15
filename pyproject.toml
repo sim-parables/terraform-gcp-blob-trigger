@@ -1,4 +1,6 @@
 [tool.pytest.ini_options]
 markers = [
     "github: Github Action Workflow Test Marker",
+    "oauth2: Google OAuth2 Authentication Test Marker",
+    "wif: Google Workload Identity Federation Authentication Test Marker",
 ]

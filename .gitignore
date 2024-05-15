@@ -2,3 +2,4 @@ test/.terraform/*
 test/.terraform.lock.hcl
 test/source/*.zip
 test/unit_test/__pycache__/*
+\.pytest_cache
