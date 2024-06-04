@@ -29,6 +29,10 @@ on:
         description: |
           Google Cloud Project ID
         required: true
+      GOOGLE_PROJECT_BILLING_NUMBER:
+        description: |
+          Google Cloud Project Billing Number
+        required: false
       GOOGLE_WORKLOAD_IDENTITY_PROVIDER:
         description: |
           Google Cloud Workload Identity Federation Provider Member ID
@@ -94,6 +98,8 @@ jobs:
     env:
         INPUT_BUCKET: ${{ needs.terraform-output.outputs.INPUT_BUCKET }}
         OUTPUT_BUCKET: ${{ needs.terraform-output.outputs.OUTPUT_BUCKET }}
+        GOOGLE_PROJECT_BILLING_NUMBER: ${{ secrets.GOOGLE_PROJECT_BILLING_NUMBER }}
+        GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
     
     defaults:
       run:
@@ -120,7 +126,7 @@ jobs:
               core.setOutput('TOKEN', token.trim())
               core.setOutput('IDTOKENURL', runtimeUrl.trim())  
 
-              const idtoken = await core.getIDToken('https://oauth2.googleapis.com/token')
+              const idtoken = await core.getIDToken('${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}')
               core.setOutput('IDTOKEN', idtoken)
             }
       

@@ -10,7 +10,8 @@ meticulous testing, developers ensure the reliability and accuracy of their
 GCP Blob Trigger implementation, fostering robustness and confidence in their 
 cloud-based applications.
 
-
+References:
+https://cloud.google.com/iam/docs/workforce-obtaining-short-lived-credentials#use_the_rest_api
 
 Local Testing Steps:
 ```
@@ -32,7 +33,6 @@ from google.auth import identity_pool
 
 import google.auth.transport.requests
 import logging
-import urllib
 import pytest
 import gcsfs
 import json
@@ -45,6 +45,8 @@ INPUT_BUCKET=os.getenv('INPUT_BUCKET')
 assert not INPUT_BUCKET is None
 OUTPUT_BUCKET=os.getenv('OUTPUT_BUCKET')
 assert not OUTPUT_BUCKET is None
+GOOGLE_PROJECT_BILLING_NUMBER=os.getenv('GOOGLE_PROJECT_BILLING_NUMBER')
+assert not GOOGLE_PROJECT_BILLING_NUMBER is None
 GOOGLE_PROJECT=os.getenv('GOOGLE_PROJECT')
 assert not GOOGLE_PROJECT is None
 
@@ -97,8 +99,10 @@ def test_gcp_wif_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
 @pytest.mark.oidc
 def test_gcp_oidc_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
     logging.info('Pytest | Test GPC Blob Trigger')
+    GOOGLE_WORKLOAD_IDENTITY_PROVIDER=os.getenv('GOOGLE_WORKLOAD_IDENTITY_PROVIDER')
     OIDC_TOKEN=os.getenv('OIDC_TOKEN')
     assert not OIDC_TOKEN is None
+    assert not GOOGLE_WORKLOAD_IDENTITY_PROVIDER is None
 
     scopes = [
         'https://www.googleapis.com/auth/cloud-platform',
@@ -106,16 +110,20 @@ def test_gcp_oidc_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
     ]
 
     try:
-        client = sts.Client(token_exchange_endpoint='https://oauth2.googleapis.com/token')
+        client = sts.Client(token_exchange_endpoint='https://sts.googleapis.com/v1/token')
         requests = google.auth.transport.requests.Request()
-        creds = client.exchange_token(
+        rs = client.exchange_token(
             request=requests,
-            grant_type=urllib.parse.quote('urn:ietf:params:oauth:grant-type:token-exchange'),
-            subject_token_type=urllib.parse.quote('urn:ietf:params:oauth:token-type:access_token'),
+            audience=GOOGLE_WORKLOAD_IDENTITY_PROVIDER,
+            grant_type='urn:ietf:params:oauth:grant-type:token-exchange',
+            subject_token_type='urn:ietf:params:oauth:token-type:id_token',
             subject_token=OIDC_TOKEN,
-            scopes=scopes
+            requested_token_type='urn:ietf:params:oauth:token-type:access_token',
+            scopes=scopes,
+            additional_options={'userProject': GOOGLE_PROJECT_BILLING_NUMBER}
         )
-
+        
+        creds = credentials.Credentials(token=rs['access_token'])
         fs = gcsfs.GCSFileSystem(project=GOOGLE_PROJECT, token=creds)
         _write_blob(fs, payload)
 
@@ -124,4 +132,4 @@ def test_gcp_oidc_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
 
         assert rs['test_value'] == payload['test_value']
     except Exception as exc:
-        raise Exception('OIDC Error', creds, exc)
+        raise Exception('OIDC Error', rs, exc)
