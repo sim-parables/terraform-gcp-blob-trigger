@@ -89,7 +89,7 @@ jobs:
       TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
     with:
       ACT_MODE: ${{ !!github.event.act }}
-      markers: "github and ${{ !!github.event.act && 'oauth2' || 'wif' }}"
+      markers: "github and ${{ !!github.event.act && 'access_token' || 'oidc' }}"
 
   terraform-dispatch-destroy:
     if: ${{ github.event.act ||github.event.inputs.terraform_operation == 'destroy' }}

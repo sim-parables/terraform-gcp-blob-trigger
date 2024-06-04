@@ -10,6 +10,8 @@ meticulous testing, developers ensure the reliability and accuracy of their
 GCP Blob Trigger implementation, fostering robustness and confidence in their 
 cloud-based applications.
 
+
+
 Local Testing Steps:
 ```
 terraform init && \
@@ -25,7 +27,7 @@ terraform destroy -auto-approve
 ```
 """
 
-from google.oauth2 import credentials
+from google.oauth2 import credentials, sts
 from google.auth import identity_pool
 
 import logging
@@ -53,7 +55,7 @@ def _read_blob(fs):
         return json.loads(f.read())
 
 @pytest.mark.github
-@pytest.mark.oauth2
+@pytest.mark.access_token
 def test_gcp_oauth2_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
     logging.info('Pytest | Test GPC Blob Trigger')
     GOOGLE_OAUTH_ACCESS_TOKEN=os.getenv('GOOGLE_OAUTH_ACCESS_TOKEN')
@@ -88,3 +90,33 @@ def test_gcp_wif_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
     rs = _read_blob(fs)
 
     assert rs['test_value'] == payload['test_value']
+
+@pytest.mark.github
+@pytest.mark.oidc
+def test_gcp_oidc_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
+    logging.info('Pytest | Test GPC Blob Trigger')
+    OIDC_TOKEN=os.getenv('OIDC_TOKEN')
+    assert not OIDC_TOKEN is None
+
+    scopes = [
+        'https://www.googleapis.com/auth/cloud-platform',
+        'https://www.googleapis.com/auth/devstorage.full_control'
+    ]
+
+    try:
+        creds = sts.Client().exchange_token(
+            grant_type='urn:ietf:params:oauth:grant-type:token-exchange',
+            subject_token_type='subject_token_type=urn:ietf:params:oauth:token-type:access_token',
+            subject_token=OIDC_TOKEN,
+            scopes=scopes
+        )
+
+        fs = gcsfs.GCSFileSystem(project=GOOGLE_PROJECT, token=creds)
+        _write_blob(fs, payload)
+
+        time.sleep(10)
+        rs = _read_blob(fs)
+
+        assert rs['test_value'] == payload['test_value']
+    except Exception as exc:
+        raise Exception('OIDC Error', creds, exc)
