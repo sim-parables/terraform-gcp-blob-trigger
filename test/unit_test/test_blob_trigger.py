@@ -32,6 +32,7 @@ from google.auth import identity_pool
 
 import google.auth.transport.requests
 import logging
+import urllib
 import pytest
 import gcsfs
 import json
@@ -109,8 +110,8 @@ def test_gcp_oidc_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
         requests = google.auth.transport.requests.Request()
         creds = client.exchange_token(
             request=requests,
-            grant_type='urn:ietf:params:oauth:grant-type:token-exchange',
-            subject_token_type='subject_token_type=urn:ietf:params:oauth:token-type:access_token',
+            grant_type=urllib.parse.quote('urn:ietf:params:oauth:grant-type:token-exchange'),
+            subject_token_type=urllib.parse.quote('urn:ietf:params:oauth:token-type:access_token'),
             subject_token=OIDC_TOKEN,
             scopes=scopes
         )
