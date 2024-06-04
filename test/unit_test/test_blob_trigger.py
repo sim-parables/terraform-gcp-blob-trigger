@@ -30,6 +30,7 @@ terraform destroy -auto-approve
 from google.oauth2 import credentials, sts
 from google.auth import identity_pool
 
+import google.auth.transport.requests
 import logging
 import pytest
 import gcsfs
@@ -104,7 +105,10 @@ def test_gcp_oidc_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
     ]
 
     try:
-        creds = sts.Client().exchange_token(
+        client = sts.Client(token_exchange_endpoint='https://oauth2.googleapis.com/token')
+        requests = google.auth.transport.requests.Request()
+        creds = client.exchange_token(
+            request=requests,
             grant_type='urn:ietf:params:oauth:grant-type:token-exchange',
             subject_token_type='subject_token_type=urn:ietf:params:oauth:token-type:access_token',
             subject_token=OIDC_TOKEN,
