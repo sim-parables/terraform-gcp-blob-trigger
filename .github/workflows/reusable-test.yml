@@ -101,7 +101,7 @@ jobs:
         INPUT_BUCKET: ${{ needs.terraform-output.outputs.INPUT_BUCKET }}
         OUTPUT_BUCKET: ${{ needs.terraform-output.outputs.OUTPUT_BUCKET }}
         GOOGLE_PROJECT_BILLING_NUMBER: ${{ secrets.GOOGLE_PROJECT_BILLING_NUMBER }}
-        GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
+        GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ needs.terraform-output.outputs.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
     
     defaults:
       run:
@@ -128,7 +128,7 @@ jobs:
               core.setOutput('TOKEN', token.trim())
               core.setOutput('IDTOKENURL', runtimeUrl.trim())  
 
-              const idtoken = await core.getIDToken('${{ secrets.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}')
+              const idtoken = await core.getIDToken('${{ needs.terraform-output.outputs.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}')
               core.setOutput('IDTOKEN', idtoken)
             }
       
