@@ -68,6 +68,7 @@ jobs:
       INPUT_BUCKET: "${{ steps.tf-raw.outputs.INPUT_BUCKET }}"
       OUTPUT_BUCKET: "${{ steps.tf-raw.outputs.OUTPUT_BUCKET }}"
       SERVICE_ACCOUNT: "${{ steps.tf-raw.outputs.SERVICE_ACCOUNT}}"
+      GOOGLE_WORKLOAD_IDENTITY_PROVIDER: "//iam.googleapis.com/${{ steps.tf-raw.outputs.GOOGLE_WORKLOAD_IDENTITY_PROVIDER}}"
 
     steps:
     # Checkout the repository to the GitHub Actions runner
@@ -89,7 +90,8 @@ jobs:
       run: |
         echo "INPUT_BUCKET=$(terraform output -raw trigger_bucket_name)
         OUTPUT_BUCKET=$(terraform output -raw results_bucket_name)
-        SERVICE_ACCOUNT=$(terraform output -raw service_account)" >> $GITHUB_OUTPUT
+        SERVICE_ACCOUNT=$(terraform output -raw service_account)
+        GOOGLE_WORKLOAD_IDENTITY_PROVIDER=$(terraform output -raw google_workload_identity_provider)" >> $GITHUB_OUTPUT
   
   terraform-test:
     name: Terraform Test

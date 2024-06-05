@@ -109,27 +109,24 @@ def test_gcp_oidc_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
         'https://www.googleapis.com/auth/devstorage.full_control'
     ]
 
-    try:
-        client = sts.Client(token_exchange_endpoint='https://sts.googleapis.com/v1/token')
-        requests = google.auth.transport.requests.Request()
-        rs = client.exchange_token(
-            request=requests,
-            audience=GOOGLE_WORKLOAD_IDENTITY_PROVIDER,
-            grant_type='urn:ietf:params:oauth:grant-type:token-exchange',
-            subject_token_type='urn:ietf:params:oauth:token-type:id_token',
-            subject_token=OIDC_TOKEN,
-            requested_token_type='urn:ietf:params:oauth:token-type:access_token',
-            scopes=scopes,
-            additional_options={'userProject': GOOGLE_PROJECT_BILLING_NUMBER}
-        )
+    client = sts.Client(token_exchange_endpoint='https://sts.googleapis.com/v1/token')
+    requests = google.auth.transport.requests.Request()
+    rs = client.exchange_token(
+        request=requests,
+        audience=GOOGLE_WORKLOAD_IDENTITY_PROVIDER,
+        grant_type='urn:ietf:params:oauth:grant-type:token-exchange',
+        subject_token_type='urn:ietf:params:oauth:token-type:id_token',
+        subject_token=OIDC_TOKEN,
+        requested_token_type='urn:ietf:params:oauth:token-type:access_token',
+        scopes=scopes,
+        additional_options={'userProject': GOOGLE_PROJECT_BILLING_NUMBER}
+    )
         
-        creds = credentials.Credentials(token=rs['access_token'])
-        fs = gcsfs.GCSFileSystem(project=GOOGLE_PROJECT, token=creds)
-        _write_blob(fs, payload)
+    creds = credentials.Credentials(token=rs['access_token'])
+    fs = gcsfs.GCSFileSystem(project=GOOGLE_PROJECT, token=creds)
+    _write_blob(fs, payload)
 
-        time.sleep(10)
-        rs = _read_blob(fs)
+    time.sleep(10)
+    rs = _read_blob(fs)
 
-        assert rs['test_value'] == payload['test_value']
-    except Exception as exc:
-        raise Exception('OIDC Error', rs, exc)
+    assert rs['test_value'] == payload['test_value']

@@ -24,3 +24,8 @@ output "service_account_access_token" {
   value       = module.service_account_auth.access_token
   sensitive   = true
 }
+
+output "google_workload_identity_provider" {
+  description = "GCP Workload Identity Federation Provider Resource ID"
+  value       = module.workload_identity_federation_principals.workload_identity_provider_id
+}

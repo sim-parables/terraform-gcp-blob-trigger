@@ -17,6 +17,11 @@ variable "POOL_ID" {
   description = "GCP Worflow Identify Federation Pool ID"
 }
 
+variable "PROVIDER_ID" {
+  type        = string
+  description = "GCP Worflow Identify Federation Provider ID"
+}
+
 ## ---------------------------------------------------------------------------------------------------------------------
 ## OPTIONAL PARAMETERS
 ## These variables have defaults and may be overridden

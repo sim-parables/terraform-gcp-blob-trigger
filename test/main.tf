@@ -61,7 +61,7 @@ provider "google" {
 ## - `google.tokengen`: Alias for the GCP provider for generating service accounts.
 ##---------------------------------------------------------------------------------------------------------------------
 module "service_account_auth" {
-  source = "github.com/sim-parables/terraform-gcp-service-account.git?ref=c073e6d3a8b1b153e8852868f9a78a70c49e49fd"
+  source = "github.com/sim-parables/terraform-gcp-service-account.git?ref=5645d79241069640d425010dbf0cf11785a03da7"
 
   IMPERSONATE_SERVICE_ACCOUNT_EMAIL = var.IMPERSONATE_SERVICE_ACCOUNT_EMAIL
   new_service_account_name          = "example-tf-sa"
@@ -107,10 +107,11 @@ provider "google" {
 ## - `google.tokengen`: Alias for the GCP provider for generating service accounts.
 ##---------------------------------------------------------------------------------------------------------------------
 module "workload_identity_federation_principals" {
-  source = "github.com/sim-parables/terraform-gcp-service-account.git?ref=c073e6d3a8b1b153e8852868f9a78a70c49e49fd//modules/workflow_identity_federation_principal"
+  source = "github.com/sim-parables/terraform-gcp-service-account.git?ref=5645d79241069640d425010dbf0cf11785a03da7//modules/workflow_identity_federation_principal"
 
   project_number     = data.google_project.this.number
   pool_id            = var.POOL_ID
+  provider_id        = var.PROVIDER_ID
   principal_roles    = local.principal_roles
   service_account_id = module.service_account_auth.service_account_id
 
