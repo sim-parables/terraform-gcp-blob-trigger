@@ -12,6 +12,7 @@ cloud-based applications.
 
 References:
 https://cloud.google.com/iam/docs/workforce-obtaining-short-lived-credentials#use_the_rest_api
+https://google.aip.dev/auth/4117
 
 Local Testing Steps:
 ```
@@ -29,7 +30,7 @@ terraform destroy -auto-approve
 """
 
 from google.oauth2 import credentials, sts
-from google.auth import identity_pool
+from google.auth import identity_pool, impersonated_credentials
 
 import google.auth.transport.requests
 import logging
@@ -100,9 +101,11 @@ def test_gcp_wif_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
 def test_gcp_oidc_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
     logging.info('Pytest | Test GPC Blob Trigger')
     GOOGLE_WORKLOAD_IDENTITY_PROVIDER=os.getenv('GOOGLE_WORKLOAD_IDENTITY_PROVIDER')
+    SERVICE_ACCOUNT=os.getenv('SERVICE_ACCOUNT')
     OIDC_TOKEN=os.getenv('OIDC_TOKEN')
-    assert not OIDC_TOKEN is None
     assert not GOOGLE_WORKLOAD_IDENTITY_PROVIDER is None
+    assert not SERVICE_ACCOUNT is None
+    assert not OIDC_TOKEN is None
 
     scopes = [
         'https://www.googleapis.com/auth/cloud-platform',
@@ -123,7 +126,12 @@ def test_gcp_oidc_blob_trigger(payload={'test_value': str(uuid.uuid4())}):
     )
         
     creds = credentials.Credentials(token=rs['access_token'])
-    fs = gcsfs.GCSFileSystem(project=GOOGLE_PROJECT, token=creds)
+    target_credentials = impersonated_credentials.Credentials(
+        source_credentials=creds,
+        target_principal=SERVICE_ACCOUNT,
+        target_scopes=scopes,
+        lifetime=500)
+    fs = gcsfs.GCSFileSystem(project=GOOGLE_PROJECT, token=target_credentials)
     _write_blob(fs, payload)
 
     time.sleep(10)

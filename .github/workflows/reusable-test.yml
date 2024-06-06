@@ -101,6 +101,7 @@ jobs:
         INPUT_BUCKET: ${{ needs.terraform-output.outputs.INPUT_BUCKET }}
         OUTPUT_BUCKET: ${{ needs.terraform-output.outputs.OUTPUT_BUCKET }}
         GOOGLE_PROJECT_BILLING_NUMBER: ${{ secrets.GOOGLE_PROJECT_BILLING_NUMBER }}
+        SERVICE_ACCOUNT: ${{ needs.terraform-output.outputs.SERVICE_ACCOUNT }}
         GOOGLE_WORKLOAD_IDENTITY_PROVIDER: ${{ needs.terraform-output.outputs.GOOGLE_WORKLOAD_IDENTITY_PROVIDER }}
     
     defaults:
