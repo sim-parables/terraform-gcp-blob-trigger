@@ -9,31 +9,6 @@ terraform{
   }
 }
 
-## ---------------------------------------------------------------------------------------------------------------------
-## RANDOM STRING RESOURCE
-##
-## This resource generates a random string of a specified length.
-##
-## Parameters:
-## - `special`: Whether to include special characters in the random string.
-## - `upper`: Whether to include uppercase letters in the random string.
-## - `length`: The length of the random string.
-## ---------------------------------------------------------------------------------------------------------------------
-resource "random_string" "this" {
-  special = false
-  upper   = false
-  length  = 4
-}
-
-locals {
-  cloud   = "gcp"
-  program = "blob-trigger"
-  project = "data-flow"
-}
-
-locals {
-  suffix = "${random_string.this.id}-${local.program}-${local.project}"
-}
 
 ##----------------------------------------------------------------------------------------------------------------------
 ## GOOGLE STORAGE BUCKET
@@ -49,7 +24,7 @@ locals {
 resource "google_storage_bucket" "this" {
   provider                    = google.auth_session
 
-  name                        = "${var.bucket_name}-${local.suffix}"
+  name                        = var.bucket_name
   storage_class               = var.storage_class
   location                    = var.storage_location
   uniform_bucket_level_access = true
