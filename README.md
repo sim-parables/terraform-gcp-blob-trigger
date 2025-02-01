@@ -1,7 +1,7 @@
 <p float="left">
   <img id="b-0" src="https://img.shields.io/badge/terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white" height="25px"/>
   <img id="b-1" src="https://img.shields.io/badge/Google_Cloud-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white" height="25px"/>
-  <img id="b-2" src="https://img.shields.io/github/actions/workflow/status/sim-parables/terraform-gcp-blob-trigger/tf-integration-test.yml?style=flat&logo=github&label=CD%20(January%202025)" height="25px"/>
+  <img id="b-2" src="https://img.shields.io/github/actions/workflow/status/sim-parables/terraform-gcp-blob-trigger/tf-integration-test.yml?style=flat&logo=github&label=CD%20(February%202025)" height="25px"/>
 </p>
 
 # Terraform GCP Blob Trigger Module
